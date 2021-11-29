@@ -1,0 +1,20 @@
+// Тут общие стили для типографики заголовков
+.word {
+  display: inline-block;
+  padding-top: 25px;
+  margin-top: -25px;
+  margin-bottom: -25px;
+  overflow: hidden;
+  &-space-right {
+    margin-right: 2px;
+  }
+}
+
+.word > span {
+    transform: translate3d(0, 15em, 0);
+    display: inline-block;
+}
+
+.word-wrapper.active .word > span {
+    transform: translate3d(0, 0, 0);
+}
