@@ -1,7 +1,8 @@
 import throttle from 'lodash/throttle';
+import {PageSwitchHandler} from '../animation/page-switch-handler';
 
 export default class FullPageScroll {
-  constructor() {
+  constructor(app) {
     this.THROTTLE_TIMEOUT = 1000;
     this.scrollFlag = true;
     this.timeout = null;
@@ -12,6 +13,9 @@ export default class FullPageScroll {
     this.activeScreen = 0;
     this.onScrollHandler = this.onScroll.bind(this);
     this.onUrlHashChengedHandler = this.onUrlHashChanged.bind(this);
+    this.headerColorSwitcher = new PageSwitchHandler(app);
+
+    this.init();
   }
 
   init() {
@@ -23,7 +27,9 @@ export default class FullPageScroll {
 
   onScroll(evt) {
     if (this.scrollFlag) {
+      const currentScreen = this.activeScreen;
       this.reCalculateActiveScreenPosition(evt.deltaY);
+      this.transitionToActiveScreen(currentScreen);
       const currentPosition = this.activeScreen;
       if (currentPosition !== this.activeScreen) {
         this.changePageDisplay();
@@ -41,14 +47,25 @@ export default class FullPageScroll {
 
   onUrlHashChanged() {
     const newIndex = Array.from(this.screenElements).findIndex((screen) => location.hash.slice(1) === screen.id);
+    const currentScreen = this.activeScreen;
     this.activeScreen = (newIndex < 0) ? 0 : newIndex;
+    this.transitionToActiveScreen(currentScreen);
     this.changePageDisplay();
   }
 
   changePageDisplay() {
     this.changeVisibilityDisplay();
     this.changeActiveMenuItem();
+    this.headerColorSwitcher.setColorScheme(this.screenElements[this.activeScreen].id);
     this.emitChangeDisplayEvent();
+  }
+
+  clearDeactivatedClass() {
+    this.screenElements.forEach((el) => {
+      if (el.classList.contains(`screen--deactivated`)) {
+        el.classList.remove(`screen--deactivated`);
+      }
+    });
   }
 
   changeVisibilityDisplay() {
@@ -79,7 +96,34 @@ export default class FullPageScroll {
       }
     });
 
+    const currentScreen = this.activeScreen;
+
     document.body.dispatchEvent(event);
+    this.transitionToActiveScreen(currentScreen);
+  }
+
+  transitionToActiveScreen(currentScreen) {
+    if (currentScreen !== this.activeScreen) {
+      this.clearDeactivatedClass();
+      this.screenElements[currentScreen].classList.add(`screen--hidden`);
+      this.screenElements[currentScreen].classList.add(`screen--deactivated`);
+      this.headerColorSwitcher.resetScheme();
+      this.emitChangeDisplayEvent();
+
+      setTimeout(this.clearDeactivatedClass.bind(this), this.THROTTLE_TIMEOUT);
+      // TTODO вызывает изменение экрана второй раз. Зачем?
+      // setTimeout(this.changePageDisplay.bind(this), this.THROTTLE_TIMEOUT / 2);
+
+      this.updateBodyClass(this.activeScreen);
+    }
+  }
+  // Проверить, точно ли нужен этот код
+  updateBodyClass(activeScreen) {
+    if (activeScreen > 0) {
+      document.querySelector(`body`).classList.add(`second-section`);
+    } else {
+      document.querySelector(`body`).classList.remove(`second-section`);
+    }
   }
 
   reCalculateActiveScreenPosition(delta) {
